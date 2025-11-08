@@ -9,8 +9,8 @@ import time
 import pandas as pd
 from transformers import AutoConfig, TFViTModel
 
-model_vgg = load_model()
-model_resnet = load_model()
+model_vgg = load_model('vgg19_model.keras')
+model_resnet = load_model('resnet50_model.keras')
 model_mobile = load_model('mobileV2_model.keras')
 model_efficient = load_model('efficientB0_model.keras')
 
