@@ -9,8 +9,8 @@ import time
 import pandas as pd
 from transformers import AutoConfig, TFViTModel
 
-model_vgg = load_model('vgg19_model.keras')
-model_resnet = load_model('resnet50_model.keras')
+# model_vgg = load_model('vgg19_model.keras')
+# model_resnet = load_model('resnet50_model.keras')
 model_mobile = load_model('mobileV2_model.keras')
 model_efficient = load_model('efficientB0_model.keras')
 
@@ -43,37 +43,37 @@ model_vit = load_model(
     custom_objects={'ViTClassifier': ViTClassifier} 
 )
 
-upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jpeg"])
+# upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jpeg"])
 
-if upload_im is not None:
-    uploaded_im = np.asarray(bytearray(upload_im.read()), dtype=np.uint8)
-    uploaded_im = cv2.cvtColor(cv2.imdecode(uploaded_im, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-    uploaded_im = cv2.resize(uploaded_im, (256, 256))
-    img_batch = np.expand_dims(uploaded_im, axis=0)
+# if upload_im is not None:
+#     uploaded_im = np.asarray(bytearray(upload_im.read()), dtype=np.uint8)
+#     uploaded_im = cv2.cvtColor(cv2.imdecode(uploaded_im, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+#     uploaded_im = cv2.resize(uploaded_im, (256, 256))
+#     img_batch = np.expand_dims(uploaded_im, axis=0)
 
-    model_list = [model_vgg, model_resnet, model_mobile, model_efficient, model_vit]
-    class_name = ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
+#     model_list = [model_vgg, model_resnet, model_mobile, model_efficient, model_vit]
+#     class_name = ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
 
-    predicted_class = []
-    confidence_score = []
-    inference_time = []
-    for model in model_list:
-        start = time.time()
-        pred = model.predict(img_batch)
-        end = time.time()
-        inference_time.append(end - start)
-        predicted_class.append(class_name[np.argmax(pred)])
-        confidence_score.append(np.max(pred)*100)
+#     predicted_class = []
+#     confidence_score = []
+#     inference_time = []
+#     for model in model_list:
+#         start = time.time()
+#         pred = model.predict(img_batch)
+#         end = time.time()
+#         inference_time.append(end - start)
+#         predicted_class.append(class_name[np.argmax(pred)])
+#         confidence_score.append(np.max(pred)*100)
 
-    df = pd.DataFrame({
-        'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0','ViTB16'],
-        'Predicted class': predicted_class,
-        'Confidence(%)': confidence_score,
-        'Inference time(s)': inference_time
-    })
+#     df = pd.DataFrame({
+#         'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0','ViTB16'],
+#         'Predicted class': predicted_class,
+#         'Confidence(%)': confidence_score,
+#         'Inference time(s)': inference_time
+#     })
 
-    st.dataframe(df)
+#     st.dataframe(df)
 
-    st.bar_chart(df, x = 'Model', y = 'Confidence(%)')
+#     st.bar_chart(df, x = 'Model', y = 'Confidence(%)')
 
-    st.bar_chart(df, x = 'Model', y = 'Inference time(s)')
+#     st.bar_chart(df, x = 'Model', y = 'Inference time(s)')
