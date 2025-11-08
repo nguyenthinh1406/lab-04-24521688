@@ -2,5 +2,5 @@ streamlit
 opencv-python-headless
 numpy
 pandas
-tensorflow
-transformers
+tensorflow==2.15.0
+transformers==4.40.0
