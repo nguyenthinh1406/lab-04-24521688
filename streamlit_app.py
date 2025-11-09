@@ -46,7 +46,7 @@ class ViTClassifier(keras.Model):
 @st.cache_resource
 def load_all_models():
     common_objects = {
-        'augment': augment
+        'sequential': augment
     }
 
     custom_objects_vgg = common_objects.copy()
@@ -72,11 +72,13 @@ def load_all_models():
     custom_objects_vit = common_objects.copy()
     custom_objects_vit['ViTClassifier'] = ViTClassifier
     custom_objects_vit['TFViTModel'] = TFViTModel
-    model_custom = load_model('custom_model.keras', custom_objects=common_objects)
-    model_vit = load_model('vit_model.keras', custom_objects=common_objects)
+    model_vit = load_model('vit_model.keras', custom_objects=custom_objects_vit)
     st.success("Tải model ViTB16 thành công!")
     
-    return model_vgg, model_resnet, model_mobile, model_efficient, model_custom, model_vit
+    return model_vgg, model_resnet, model_mobile, model_efficient, model_vit
+
+model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models()
+st.success("Đã tải tất cả model!")
 
 upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jpeg"])
 
