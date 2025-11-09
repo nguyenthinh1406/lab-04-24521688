@@ -85,38 +85,43 @@ except Exception as e:
 upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jpeg"])
 
 if upload_im is not None:
-   uploaded_im = np.asarray(bytearray(upload_im.read()), dtype = np.uint8)
-   uploaded_im = cv2.cvtColor(cv2.imdecode(uploaded_im, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-
+    img_original = np.asarray(bytearray(upload_im.read()), dtype = np.uint8)
+    img_original = cv2.cvtColor(cv2.imdecode(img_original, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    
+    st.image(img_original, caption='Ảnh đã tải lên.', use_column_width=True)
+    
     model_list = [model_vgg, model_resnet, model_mobile, model_efficient, model_vit]
     model_names = ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0', 'ViTB16']
-    class_name = ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
+    
     preprocess_funcs = [vgg_preprocess, resnet_preprocess, mobile_preprocess, efficient_preprocess, None]
+    
+    class_name = ['Bacterial_spot', 'Early_blight', 'Late_blight', 'Leaf_Mold', 'Septoria_leaf_spot', 'Healthy']
 
     predicted_class = []
     confidence_score = []
     inference_time = []
+
     for i in range(len(model_list)):
         model = model_list[i]
         name = model_names[i]
         preprocess_func = preprocess_funcs[i]
-    
+
         if name == 'ViTB16':
             target_size = (224, 224)
-            img_resized = cv2.resize(uploaded_im, target_size)
+            img_resized = cv2.resize(img_original, target_size)
             img_batch = np.expand_dims(img_resized, axis=0)
             img_processed = img_batch.astype('float32') / 255.0
         else:
             target_size = (256, 256)
-            img_resized = cv2.resize(uploaded_im, target_size)
+            img_resized = cv2.resize(img_original, target_size)
             img_batch = np.expand_dims(img_resized, axis=0)
             img_processed = preprocess_func(img_batch.astype('float32'))
-        start = time.time()
-        pred = model.predict(img_batch)
-        end = time.time()
-        inference_time.append(end - start)
-        predicted_class.append(class_name[np.argmax(pred)])
-        confidence_score.append(np.max(pred)*100)
+    start = time.time()
+    pred = model.predict(img_batch)
+    end = time.time()
+    inference_time.append(end - start)
+    predicted_class.append(class_name[np.argmax(pred)])
+    confidence_score.append(np.max(pred)*100)
 
     df = pd.DataFrame({
         'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0','ViTB16'],
