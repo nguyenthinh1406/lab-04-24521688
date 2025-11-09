@@ -92,10 +92,8 @@ if upload_im is not None:
     
     model_list = [model_vgg, model_resnet, model_mobile, model_efficient, model_vit]
     model_names = ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0', 'ViTB16']
-    
     preprocess_funcs = [vgg_preprocess, resnet_preprocess, mobile_preprocess, efficient_preprocess, None]
-    
-    class_name = ['Bacterial_spot', 'Early_blight', 'Late_blight', 'Leaf_Mold', 'Septoria_leaf_spot', 'Healthy']
+    class_name = ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
 
     predicted_class = []
     confidence_score = []
