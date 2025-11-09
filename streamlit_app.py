@@ -7,7 +7,7 @@ from keras.models import load_model
 import tensorflow as tf
 import time
 import pandas as pd
-from transformers import AutoConfig, TFViTModel
+# from transformers import AutoConfig, TFViTModel
 from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess
 from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobile_preprocess
@@ -19,35 +19,34 @@ augment = keras.Sequential([
     layers.RandomContrast(factor = 0.5)
 ], name = 'augment')
 
-class ViTClassifier(keras.Model):
-    def __init__(self, num_classes = 6, **kwargs):
-        super().__init__(**kwargs)
-        config = AutoConfig.from_pretrained('google/vit-base-patch16-224')
-        self.vit_backbone = TFViTModel.from_pretrained(
-            'google/vit-base-patch16-224', config = config
-        )
-        self.vit_backbone.trainable = False
-        self.head = keras.Sequential([
-            layers.Dense(128, use_bias = False),
-            layers.BatchNormalization(),
-            layers.Activation('relu'),
-            layers.Dropout(0.5),
-            layers.Dense(num_classes, activation = 'softmax')
-        ], name = "classification_head")
-    def call(self, inputs):
-        outputs = self.vit_backbone(inputs) 
-        x = outputs.last_hidden_state[:, 0, :]
-        return self.head(x)
+# class ViTClassifier(keras.Model):
+#     def __init__(self, num_classes = 6, **kwargs):
+#         super().__init__(**kwargs)
+#         config = AutoConfig.from_pretrained('google/vit-base-patch16-224')
+#         self.vit_backbone = TFViTModel.from_pretrained(
+#             'google/vit-base-patch16-224', config = config
+#         )
+#         self.vit_backbone.trainable = False
+#         self.head = keras.Sequential([
+#             layers.Dense(128, use_bias = False),
+#             layers.BatchNormalization(),
+#             layers.Activation('relu'),
+#             layers.Dropout(0.5),
+#             layers.Dense(num_classes, activation = 'softmax')
+#         ], name = "classification_head")
+#     def call(self, inputs):
+#         outputs = self.vit_backbone(inputs) 
+#         x = outputs.last_hidden_state[:, 0, :]
+#         return self.head(x)
 
 @st.cache_resource
 def load_all_models():
-    
     common_objects = {
         'augment': augment,
         'sequential': augment,
-        'sequential_1': augment,
-        'ViTClassifier': ViTClassifier,
-        'TFViTModel': TFViTModel
+        'sequential_1': augment
+        # 'ViTClassifier': ViTClassifier,
+        # 'TFViTModel': TFViTModel
     }
 
     custom_objects_vgg = common_objects.copy()
@@ -70,15 +69,15 @@ def load_all_models():
     model_efficient = load_model('efficientB0_model.keras', custom_objects=custom_objects_efficient)
     st.success("Tải model EfficientNetB0 thành công!")
 
-    model_vit = load_model('vitB16_model.keras', custom_objects=common_objects)
-    st.success("Tải model ViTB16 thành công!")
+    # model_vit = load_model('vitB16_model.keras', custom_objects=common_objects)
+    # st.success("Tải model ViTB16 thành công!")
     
-    return model_vgg, model_resnet, model_mobile, model_efficient, model_vit
+    return model_vgg, model_resnet, model_mobile, model_efficient
 
 
 try:
-    model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models()
-    st.success("Đã tải tất cả 5 model!")
+    model_vgg, model_resnet, model_mobile, model_efficient = load_all_models()
+    st.success("Đã tải tất cả 4 model!")
 except Exception as e:
     st.error(f"Lỗi khi tải model: {e}")
     st.stop()
@@ -90,9 +89,9 @@ if upload_im is not None:
     
     st.image(img_original, caption='Ảnh đã tải lên.', use_column_width=True)
     
-    model_list = [model_vgg, model_resnet, model_mobile, model_efficient, model_vit]
-    model_names = ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0', 'ViTB16']
-    preprocess_funcs = [vgg_preprocess, resnet_preprocess, mobile_preprocess, efficient_preprocess, None]
+    model_list = [model_vgg, model_resnet, model_mobile, model_efficient]
+    model_names = ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0']
+    preprocess_funcs = [vgg_preprocess, resnet_preprocess, mobile_preprocess, efficient_preprocess]
     class_name = ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
 
     predicted_class = []
@@ -104,16 +103,16 @@ if upload_im is not None:
         name = model_names[i]
         preprocess_func = preprocess_funcs[i]
 
-        if name == 'ViTB16':
-            target_size = (224, 224)
-            img_resized = cv2.resize(img_original, target_size)
-            img_batch = np.expand_dims(img_resized, axis=0)
-            img_processed = img_batch.astype('float32') / 255.0
-        else:
-            target_size = (256, 256)
-            img_resized = cv2.resize(img_original, target_size)
-            img_batch = np.expand_dims(img_resized, axis=0)
-            img_processed = preprocess_func(img_batch.astype('float32'))
+        # if name == 'ViTB16':
+        #     target_size = (224, 224)
+        #     img_resized = cv2.resize(img_original, target_size)
+        #     img_batch = np.expand_dims(img_resized, axis=0)
+        #     img_processed = img_batch.astype('float32') / 255.0
+        # else:
+        target_size = (256, 256)
+        img_resized = cv2.resize(img_original, target_size)
+        img_batch = np.expand_dims(img_resized, axis=0)
+        img_processed = preprocess_func(img_batch.astype('float32'))
             
         start = time.time()
         pred = model.predict(img_processed)
@@ -123,7 +122,7 @@ if upload_im is not None:
         confidence_score.append(np.max(pred)*100)
 
     df = pd.DataFrame({
-        'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0','ViTB16'],
+        'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0'],
         'Predicted class': predicted_class,
         'Confidence(%)': confidence_score,
         'Inference time(s)': inference_time
