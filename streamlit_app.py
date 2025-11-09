@@ -17,7 +17,7 @@ augment = keras.Sequential([
     layers.RandomFlip(),
     layers.RandomRotation(factor = 0.2),
     layers.RandomContrast(factor = 0.5)
-])
+], name = 'augment')
 
 class ViTClassifier(keras.Model):
     def __init__(self, num_classes=6, **kwargs):
@@ -46,7 +46,7 @@ class ViTClassifier(keras.Model):
 @st.cache_resource
 def load_all_models():
     common_objects = {
-        'sequential': augment
+        'augment': augment
     }
 
     custom_objects_vgg = common_objects.copy()
