@@ -20,20 +20,20 @@ augment = keras.Sequential([
 ], name = 'augment')
 
 class ViTClassifier(keras.Model):
-    def __init__(self, num_classes=6, **kwargs):
+    def __init__(self, num_classes = 6, **kwargs):
         super().__init__(**kwargs)
         config = AutoConfig.from_pretrained('google/vit-base-patch16-224')
         self.vit_backbone = TFViTModel.from_pretrained(
-            'google/vit-base-patch16-224', config=config
+            'google/vit-base-patch16-224', config = config
         )
         self.vit_backbone.trainable = False
         self.head = keras.Sequential([
-            layers.Dense(128, use_bias=False),
+            layers.Dense(128, use_bias = False),
             layers.BatchNormalization(),
             layers.Activation('relu'),
             layers.Dropout(0.5),
-            layers.Dense(num_classes, activation='softmax')
-        ], name="classification_head")
+            layers.Dense(num_classes, activation = 'softmax')
+        ], name = "classification_head")
     def call(self, inputs):
         outputs = self.vit_backbone(inputs) 
         x = outputs.last_hidden_state[:, 0, :]
@@ -97,7 +97,7 @@ if upload_im is not None:
     confidence_score = []
     inference_time = []
     for model in model_list:
-        if model = model_vit:
+        if model == model_vit:
             uploaded_im = cv2.resize(uploaded_im, (224, 224))
             img_batch = np.expand_dims(uploaded_im, axis = 0)
         start = time.time()
