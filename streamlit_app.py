@@ -13,23 +13,26 @@ from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_pr
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobile_preprocess
 from tensorflow.keras.applications.efficientnet import preprocess_input as efficient_preprocess
 
+#
+# BƯỚC 1: ĐỊNH NGHĨA AUGMENT
+#
 augment = keras.Sequential([
     layers.RandomFlip(),
     layers.RandomRotation(factor = 0.2),
     layers.RandomContrast(factor = 0.5)
-], name = 'augment')
+], name = 'augment') # <-- Tên bạn đã đặt
 
+#
+# BƯỚC 2: ĐỊNH NGHĨA CLASS VIT
+#
 class ViTClassifier(keras.Model):
     def __init__(self, num_classes=6, **kwargs):
         super().__init__(**kwargs)
-        
         config = AutoConfig.from_pretrained('google/vit-base-patch16-224')
-    
         self.vit_backbone = TFViTModel.from_pretrained(
             'google/vit-base-patch16-224', config=config
         )
         self.vit_backbone.trainable = False
-        
         self.head = keras.Sequential([
             layers.Dense(128, use_bias=False),
             layers.BatchNormalization(),
@@ -37,51 +40,66 @@ class ViTClassifier(keras.Model):
             layers.Dropout(0.5),
             layers.Dense(num_classes, activation='softmax')
         ], name="classification_head")
-
     def call(self, inputs):
         outputs = self.vit_backbone(inputs) 
         x = outputs.last_hidden_state[:, 0, :]
         return self.head(x)
 
+#
+# BƯỚC 3: HÀM TẢI MODEL (SỬA LỖI CUỐI CÙNG)
+#
 @st.cache_resource
 def load_all_models():
+    
+    # CUNG CẤP TẤT CẢ CÁC TÊN CÓ THỂ CÓ CHO LAYER AUGMENT
     common_objects = {
-        'augment': augment,
-        'sequential': augment,
-        'sequential_1': augment
+        'augment': augment,       # Tên bạn đã đặt
+        'sequential': augment,    # Tên mặc định của Keras
+        'sequential_1': augment,  # Tên mặc định thứ 2
+        'ViTClassifier': ViTClassifier,
+        'TFViTModel': TFViTModel
     }
 
+    # 1. Tải VGG Model
     custom_objects_vgg = common_objects.copy()
     custom_objects_vgg['preprocess_input'] = vgg_preprocess
     model_vgg = load_model('vgg19_model.keras', custom_objects=custom_objects_vgg)
     st.success("Tải model VGG19 thành công!")
 
+    # 2. Tải ResNet Model
     custom_objects_resnet = common_objects.copy()
     custom_objects_resnet['preprocess_input'] = resnet_preprocess
     model_resnet = load_model('resnet50_model.keras', custom_objects=custom_objects_resnet)
     st.success("Tải model ResNet50 thành công!")
 
+    # 3. Tải MobileNetV2 Model
     custom_objects_mobile = common_objects.copy()
     custom_objects_mobile['preprocess_input'] = mobile_preprocess
     model_mobile = load_model('mobileV2_model.keras', custom_objects=custom_objects_mobile)
     st.success("Tải model MobileNetV2 thành công!")
 
+    # 4. Tải EfficientNetB0 Model
     custom_objects_efficient = common_objects.copy()
     custom_objects_efficient['preprocess_input'] = efficient_preprocess
     model_efficient = load_model('efficientB0_model.keras', custom_objects=custom_objects_efficient)
     st.success("Tải model EfficientNetB0 thành công!")
 
-    custom_objects_vit = common_objects.copy()
-    custom_objects_vit['ViTClassifier'] = ViTClassifier
-    custom_objects_vit['TFViTModel'] = TFViTModel
-    model_vit = load_model('vitB16_model.keras', custom_objects=custom_objects_vit)
+    # 5. Tải ViT Model (Dùng đúng tên file 'vitB16_model.keras')
+    model_vit = load_model('vitB16_model.keras', custom_objects=common_objects)
     st.success("Tải model ViTB16 thành công!")
     
+    # TRẢ VỀ 5 MODEL
     return model_vgg, model_resnet, model_mobile, model_efficient, model_vit
 
-model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models()
-st.success("Đã tải tất cả model!")
+# --- Code chính của Streamlit ---
 
+try:
+    # NHẬN 5 MODEL
+    model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models()
+    st.success("Đã tải tất cả 5 model!")
+except Exception as e:
+    st.error(f"Lỗi khi tải model: {e}")
+    st.stop()
 upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jpeg"])
 
 if upload_im is not None:
