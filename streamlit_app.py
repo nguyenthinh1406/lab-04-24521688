@@ -116,12 +116,13 @@ if upload_im is not None:
             img_resized = cv2.resize(img_original, target_size)
             img_batch = np.expand_dims(img_resized, axis=0)
             img_processed = preprocess_func(img_batch.astype('float32'))
-    start = time.time()
-    pred = model.predict(img_batch)
-    end = time.time()
-    inference_time.append(end - start)
-    predicted_class.append(class_name[np.argmax(pred)])
-    confidence_score.append(np.max(pred)*100)
+            
+        start = time.time()
+        pred = model.predict(img_processed)
+        end = time.time()
+        inference_time.append(end - start)
+        predicted_class.append(class_name[np.argmax(pred)])
+        confidence_score.append(np.max(pred)*100)
 
     df = pd.DataFrame({
         'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0','ViTB16'],
