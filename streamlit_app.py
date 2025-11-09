@@ -8,11 +8,16 @@ import tensorflow as tf
 import time
 import pandas as pd
 from transformers import AutoConfig, TFViTModel
+from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobile_preprocess
+from tensorflow.keras.applications.efficientnet import preprocess_input as efficient_preprocess
 
-model_vgg = load_model('vgg19_model.keras')
-model_resnet = load_model('resnet50_model.keras')
-model_mobile = load_model('mobileV2_model.keras')
-model_efficient = load_model('efficientB0_model.keras')
+augment = keras.Sequential([
+    layers.RandomFlip(),
+    layers.RandomRotation(factor = 0.2),
+    layers.RandomContrast(factor = 0.5)
+])
 
 class ViTClassifier(keras.Model):
     def __init__(self, num_classes=6, **kwargs):
@@ -37,11 +42,41 @@ class ViTClassifier(keras.Model):
         outputs = self.vit_backbone(inputs) 
         x = outputs.last_hidden_state[:, 0, :]
         return self.head(x)
+
+@st.cache_resource
+def load_all_models():
+    common_objects = {
+        'augment': augment
+    }
+
+    custom_objects_vgg = common_objects.copy()
+    custom_objects_vgg['preprocess_input'] = vgg_preprocess
+    model_vgg = load_model('vgg19_model.keras', custom_objects=custom_objects_vgg)
+    st.success("Tải model VGG19 thành công!")
+
+    custom_objects_resnet = common_objects.copy()
+    custom_objects_resnet['preprocess_input'] = resnet_preprocess
+    model_resnet = load_model('resnet50_model.keras', custom_objects=custom_objects_resnet)
+    st.success("Tải model ResNet50 thành công!")
+
+    custom_objects_mobile = common_objects.copy()
+    custom_objects_mobile['preprocess_input'] = mobile_preprocess
+    model_mobile = load_model('mobileV2_model.keras', custom_objects=custom_objects_mobile)
+    st.success("Tải model MobileNetV2 thành công!")
+
+    custom_objects_efficient = common_objects.copy()
+    custom_objects_efficient['preprocess_input'] = efficient_preprocess
+    model_efficient = load_model('efficientB0_model.keras', custom_objects=custom_objects_efficient)
+    st.success("Tải model EfficientNetB0 thành công!")
+
+    custom_objects_vit = common_objects.copy()
+    custom_objects_vit['ViTClassifier'] = ViTClassifier
+    custom_objects_vit['TFViTModel'] = TFViTModel
+    model_custom = load_model('custom_model.keras', custom_objects=common_objects)
+    model_vit = load_model('vit_model.keras', custom_objects=common_objects)
+    st.success("Tải model ViTB16 thành công!")
     
-model_vit = load_model(
-    'vitB16_model.keras',
-    custom_objects={'ViTClassifier': ViTClassifier} 
-)
+    return model_vgg, model_resnet, model_mobile, model_efficient, model_custom, model_vit
 
 upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jpeg"])
 
@@ -76,4 +111,4 @@ if upload_im is not None:
 
     st.bar_chart(df, x = 'Model', y = 'Confidence(%)')
 
-#     st.bar_chart(df, x = 'Model', y = 'Inference time(s)')
+    st.bar_chart(df, x = 'Model', y = 'Inference time(s)')
