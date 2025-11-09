@@ -72,7 +72,7 @@ def load_all_models():
     custom_objects_vit = common_objects.copy()
     custom_objects_vit['ViTClassifier'] = ViTClassifier
     custom_objects_vit['TFViTModel'] = TFViTModel
-    model_vit = load_model('vit_model.keras', custom_objects=custom_objects_vit)
+    model_vit = load_model('vitB16_model.keras', custom_objects=custom_objects_vit)
     st.success("Tải model ViTB16 thành công!")
     
     return model_vgg, model_resnet, model_mobile, model_efficient, model_vit
