@@ -46,7 +46,9 @@ class ViTClassifier(keras.Model):
 @st.cache_resource
 def load_all_models():
     common_objects = {
-        'augment': augment
+        'augment': augment,
+        'sequential': augment,
+        'sequential_1': augment
     }
 
     custom_objects_vgg = common_objects.copy()
