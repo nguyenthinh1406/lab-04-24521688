@@ -7,7 +7,12 @@ from keras.models import load_model
 import tensorflow as tf
 import time
 import pandas as pd
-# from transformers import AutoConfig, TFViTModel
+from PIL import Image
+import timm
+import torch.nn as nn
+import torch
+import torchvision.transforms as T
+
 from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess
 from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobile_preprocess
@@ -19,25 +24,11 @@ augment = keras.Sequential([
     layers.RandomContrast(factor = 0.5)
 ], name = 'augment')
 
-# class ViTClassifier(keras.Model):
-#     def __init__(self, num_classes = 6, **kwargs):
-#         super().__init__(**kwargs)
-#         config = AutoConfig.from_pretrained('google/vit-base-patch16-224')
-#         self.vit_backbone = TFViTModel.from_pretrained(
-#             'google/vit-base-patch16-224', config = config
-#         )
-#         self.vit_backbone.trainable = False
-#         self.head = keras.Sequential([
-#             layers.Dense(128, use_bias = False),
-#             layers.BatchNormalization(),
-#             layers.Activation('relu'),
-#             layers.Dropout(0.5),
-#             layers.Dense(num_classes, activation = 'softmax')
-#         ], name = "classification_head")
-#     def call(self, inputs):
-#         outputs = self.vit_backbone(inputs) 
-#         x = outputs.last_hidden_state[:, 0, :]
-#         return self.head(x)
+vit_transform = T.Compose([
+    T.Resize((224, 224)),
+    T.ToTensor(),
+    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 @st.cache_resource
 def load_all_models():
@@ -45,8 +36,6 @@ def load_all_models():
         'augment': augment,
         'sequential': augment,
         'sequential_1': augment
-        # 'ViTClassifier': ViTClassifier,
-        # 'TFViTModel': TFViTModel
     }
 
     custom_objects_vgg = common_objects.copy()
@@ -69,15 +58,24 @@ def load_all_models():
     model_efficient = load_model('efficientB0_model.keras', custom_objects=custom_objects_efficient)
     st.success("Tải model EfficientNetB0 thành công!")
 
-    # model_vit = load_model('vitB16_model.keras', custom_objects=common_objects)
-    # st.success("Tải model ViTB16 thành công!")
+    model_vit = timm.create_model(
+        'vit_base_patch16_224', 
+        pretrained = False, 
+    )      
+
+    in_features_vit = model_vit.head.in_features
+    model_vit.head = nn.Linear(in_features_vit, 6)
+
+    model_vit.load_state_dict(torch.load('model_vit.pth'))
+    model_vit.eval()
+    st.success("Tải model ViTB16 thành công!")
     
-    return model_vgg, model_resnet, model_mobile, model_efficient
+    return model_vgg, model_resnet, model_mobile, model_efficient, model_vit
 
 
 try:
-    model_vgg, model_resnet, model_mobile, model_efficient = load_all_models()
-    st.success("Đã tải tất cả 4 model!")
+    model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models()
+    st.success("Đã tải tất cả 5 model!")
 except Exception as e:
     st.error(f"Lỗi khi tải model: {e}")
     st.stop()
@@ -86,43 +84,53 @@ upload_im = st.file_uploader("Chọn ảnh của bạn", type=["png", "jpg", "jp
 if upload_im is not None:
     img_original = np.asarray(bytearray(upload_im.read()), dtype = np.uint8)
     img_original = cv2.cvtColor(cv2.imdecode(img_original, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(img_original)
     
-    st.image(img_original, caption='Ảnh đã tải lên.', use_column_width=True)
+    st.image(img_original, caption = 'Ảnh đã tải lên.', use_column_width = True)
     
-    model_list = [model_vgg, model_resnet, model_mobile, model_efficient]
-    model_names = ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0']
-    preprocess_funcs = [vgg_preprocess, resnet_preprocess, mobile_preprocess, efficient_preprocess]
+    model_list = [model_vgg, model_resnet, model_mobile, model_efficient, model_vit]
+    model_names = ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0', 'ViTNetB16']
+    preprocess_funcs = [vgg_preprocess, resnet_preprocess, mobile_preprocess, efficient_preprocess, None]
     class_name = ['buildings', 'forest', 'glacier', 'mountain', 'sea', 'street']
 
     predicted_class = []
     confidence_score = []
     inference_time = []
 
-    for i in range(len(model_list)):
-        model = model_list[i]
-        name = model_names[i]
-        preprocess_func = preprocess_funcs[i]
+    for model, name, preprocess_func in zip(model_list, model_names, preprocess_funcs):
+        st.write(f"--- \nĐang xử lý với model: **{name}**")
 
-        # if name == 'ViTB16':
-        #     target_size = (224, 224)
-        #     img_resized = cv2.resize(img_original, target_size)
-        #     img_batch = np.expand_dims(img_resized, axis=0)
-        #     img_processed = img_batch.astype('float32') / 255.0
-        # else:
-        target_size = (256, 256)
-        img_resized = cv2.resize(img_original, target_size)
-        img_batch = np.expand_dims(img_resized, axis=0)
-        img_processed = preprocess_func(img_batch.astype('float32'))
-            
-        start = time.time()
-        pred = model.predict(img_processed)
-        end = time.time()
-        inference_time.append(end - start)
-        predicted_class.append(class_name[np.argmax(pred)])
-        confidence_score.append(np.max(pred)*100)
+        if name == 'ViTB16':
+            start = time.time()
+            img_tensor = vit_transform(img_pil).unsqueeze(0)
+            with torch.no_grad():
+                logits = model(img_tensor)
+            probabilities = torch.nn.functional.softmax(logits, dim=1)
+            conf = probabilities.max().item() * 100
+            pred_idx = probabilities.argmax().item()
+            pred_class = class_name[pred_idx]
+            end = time.time()
+
+            inference_time.append(end - start)
+            predicted_class.append(pred_class)
+            confidence_score.append(conf)
+
+        else:
+            target_size = (256, 256)
+            img_resized = cv2.resize(img_original, target_size)
+            img_batch = np.expand_dims(img_resized, axis=0)
+            img_processed = preprocess_func(img_batch.astype('float32'))
+
+            start = time.time()
+            pred = model.predict(img_processed)
+            end = time.time()
+
+            inference_time.append(end - start)
+            predicted_class.append(class_name[np.argmax(pred)])
+            confidence_score.append(np.max(pred) * 100)
 
     df = pd.DataFrame({
-        'Model': ['VGG19', 'ResNet50', 'MobileNetV2', 'EfficientNetB0'],
+        'Model': model_names,
         'Predicted class': predicted_class,
         'Confidence(%)': confidence_score,
         'Inference time(s)': inference_time
