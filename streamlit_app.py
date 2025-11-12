@@ -55,7 +55,7 @@ def load_all_models():
 
     custom_objects_efficient = common_objects.copy()
     custom_objects_efficient['preprocess_input'] = efficient_preprocess
-    model_efficient = load_model('efficientB0_model.keras', custom_objects=custom_objects_efficient)
+    model_efficient = load_model('efficientB0_model.keras', custom_objects = custom_objects_efficient)
     st.success("Tải model EfficientNetB0 thành công!")
 
     model_vit = timm.create_model(
@@ -66,7 +66,10 @@ def load_all_models():
     in_features_vit = model_vit.head.in_features
     model_vit.head = nn.Linear(in_features_vit, 6)
 
-    model_loaded = torch.load('model_vit.pth', map_location=torch.device('cpu'), weights_only=False)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    model_loaded = torch.load('model_vit.pth', map_location = device, weights_only = False)
+    model_vit.to(device)
     model_vit.eval()
     st.success("Tải model ViTB16 thành công!")
     
@@ -100,9 +103,10 @@ if upload_im is not None:
     for model, name, preprocess_func in zip(model_list, model_names, preprocess_funcs):
         st.write(f"--- \nĐang xử lý với model: **{name}**")
 
-        if name == 'ViTB16':
+        if name == 'ViTNetB16':
             start = time.time()
             img_tensor = vit_transform(img_pil).unsqueeze(0)
+            img_tensor = img_tensor.to(device)
             with torch.no_grad():
                 logits = model(img_tensor)
             probabilities = torch.nn.functional.softmax(logits, dim=1)
