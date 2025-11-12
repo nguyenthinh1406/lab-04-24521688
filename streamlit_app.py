@@ -30,8 +30,10 @@ vit_transform = T.Compose([
     T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 @st.cache_resource
-def load_all_models():
+def load_all_models(device):
     common_objects = {
         'augment': augment,
         'sequential': augment,
@@ -65,8 +67,6 @@ def load_all_models():
 
     in_features_vit = model_vit.head.in_features
     model_vit.head = nn.Linear(in_features_vit, 6)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model_loaded = torch.load('model_vit.pth', map_location = device, weights_only = False)
     model_vit.to(device)
@@ -77,7 +77,7 @@ def load_all_models():
 
 
 try:
-    model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models()
+    model_vgg, model_resnet, model_mobile, model_efficient, model_vit = load_all_models(device)
     st.success("Đã tải tất cả 5 model!")
 except Exception as e:
     st.error(f"Lỗi khi tải model: {e}")
