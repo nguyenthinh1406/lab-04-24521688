@@ -66,7 +66,7 @@ def load_all_models():
     in_features_vit = model_vit.head.in_features
     model_vit.head = nn.Linear(in_features_vit, 6)
 
-    model_vit.load_state_dict(torch.load('model_vit.pth'))
+    model_vit.load_state_dict(torch.load('model_vit.pth', weights_only = False))
     model_vit.eval()
     st.success("Tải model ViTB16 thành công!")
     
